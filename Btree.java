@@ -32,8 +32,8 @@ final class Btree {
    * B+ tree Constructor.
    */
   public Btree() {
-    root = initNode();
-    nodes[root].children[0] = createLeaf();
+    // Init tree by creating a leaf node as root
+    root = createLeaf();
   }
 
   /*********** B tree functions for Public ******************/
@@ -48,16 +48,33 @@ final class Btree {
 
   /*
    * Insert(int value)
-   *    - If -1 is returned, the value is inserted and increase cntValues.
-   *    - If -2 is returned, the value already exists.
+   *    - Void function, Insert value if it does not exist in our tree.
    */
   public void Insert(int value) {
-    if(nodeInsert(value, root) == -1) cntValues++;
+    // Lookup value in our tree, if exist, return
+    if (Lookup(value)) return;
+    // Start from rootNode, split root if no space left.
+    Node rootNode = nodes[root];
+    if (rootNode.size == NODESIZE){
+      int oldRootIndex = root;
+      // Create new root node
+      int newRootIndex = initNode();
+      Node newRoot = nodes[newRootIndex];
+      root = newRootIndex;
+      // Set new root first child as old root, second child as new split node
+      newRoot.children[0] = oldRootIndex;
+      nodeSplit(newRootIndex, 0, oldRootIndex);
+      nodeInsert(value, newRootIndex);
+    }else{
+      nodeInsert(value, root);
+    }
+    // Insert finished, count new value.
+    cntValues++;
   }
 
   /*
    * Display(int node)
-   *    print out the indexing tree structure under specified node.
+   *    - Print out the indexing tree structure under specified node.
    */
   public void Display(int pointer) {
     System.out.println("\nPrinting node "+pointer);
@@ -103,187 +120,100 @@ final class Btree {
    */
   private boolean nodeLookup(int value, int pointer) {
     Node currNode = nodes[pointer];
-    // If current node is leaf node, check if node.values has given values.
-    if (isLeaf(currNode)){
-      // If value exist, return true
-      for(int i = 0; i < currNode.size; i++){
-        if (currNode.values[i] == value) return true;
-      }
-      // If value does not exist return false.
-      return false;
-    }else{
-      // If current node is not leaf node, check which child node should the value exist at.
-      // Then return nodeLookup result of child node.
-      for(int i = 0; i < currNode.size; i++){
-        if(currNode.values[i] > value){
-          return nodeLookup(value, currNode.children[i]);
-        }
-      }
-      return nodeLookup(value, currNode.children[currNode.size]);
+    // start searching from index 0
+    int i = 0;
+    for(; i < currNode.size; i++) {
+      int currValue = currNode.values[i];
+      // if current value is greater than searching value, break for loop.
+      if (currValue > value) break;
+      // if current value equals to searching value, return true.
+      if (currValue == value) return true;
     }
+    // i == currNode.size+1 or currNode.values[i]> value, either way, we should search ith child.
+    // if currNode is leafNode return false, else, start searching ith child
+    if (isLeaf(currNode)) return false;
+    else return nodeLookup(value, currNode.children[i]);
   }
 
   /*
    * nodeInsert(int value, int pointer)
-   *    - -2 if the value already exists in the specified node
-   *    - -1 if the value is inserted into the node or
-   *            something else if the parent node has to be restructured
+   *    - Void function, start at current pointer to insert value.
    */
-  private int nodeInsert(int value, int pointer) {
+  private void nodeInsert(int value, int pointer) {
     Node currNode = nodes[pointer];
-    // When current node is leaf
+    // Start iterating
+    int i = currNode.size-1;
+    // if current node is a leaf node, we insert new value.
+    // Size of leaf node has been check at parent node/root, thus must have empty space.
     if (isLeaf(currNode)){
-      // If this node already exist, return -2.
-      for(int i = 0; i < currNode.size; i++){
-        if (currNode.values[i] == value) return -2;
+      while(i >= 0 && value < currNode.values[i]) {
+        currNode.values[i + 1] = currNode.values[i];
+        i--;
       }
-      // If this node does not exist and current leaf has space, then add new value to this leaf.
-      if (currNode.size < NODESIZE){
-        int i = currNode.size-1;
-        // Loop and move all greater value to the right.
-        while(i >= 0 && currNode.values[i] > value) {
-          currNode.values[i+1] = currNode.values[i];
-          i--;
-        }
-        // Add new value and return -1.
-        currNode.values[i+1] = value;
-        currNode.size++;
-        return -1;
-      } else {
-        // If current leaf does not have space, we need to split this leaf node into two leaf node.
-        // And return pointer to the new leaf node.
-        int newChildIndex = createLeaf();
-        Node newChildNode = nodes[newChildIndex];
-        // Sort all values
-        int[] allValues = new int[NODESIZE+1];
-        System.arraycopy(currNode.values, 0, allValues, 0, NODESIZE);
-        allValues[NODESIZE] = value;
-        Arrays.sort(allValues);
-        // Reset current node and size.
-        currNode.values = new int[NODESIZE];
-        currNode.size = 0;
-        // Distribute values in current node and new node.
-        int oldLeafStartIndex = 0;
-        int newLeafStartIndex = 0;
-        for(int i = 0; i < allValues.length; i++){
-          if (i <= NODESIZE/2) {
-            currNode.values[oldLeafStartIndex++] = allValues[i];
-            currNode.size++;
-          }else{
-            newChildNode.values[newLeafStartIndex++] = allValues[i];
-            newChildNode.size++;
-          }
-        }
-        return newChildIndex;
-      }
+      currNode.values[i+1] = value;
+      currNode.size++;
     }else{
-      // When current node is not leaf node.
-      // Find the child node to insert new value.
-      int childNodeIndex = 0;
-      for(; childNodeIndex < currNode.size; childNodeIndex++){
-        if(currNode.values[childNodeIndex] > value){
-          break;
-        }
+      // find write place to insert new value
+      while(i >= 0 && value < currNode.values[i]) {
+        i--;
       }
-      // If new value is greater than all values in current node, insert it into the last child node.
-      // Add new leaf node if last child does not exist.
-      if(childNodeIndex == currNode.size+1) {
-        if (childNodeIndex>0) currNode.children[childNodeIndex] = createLeaf();
+      int childNodeIndex = currNode.children[i+1];
+      Node childNode = nodes[childNodeIndex];
+      // If child node is full, split child node first.
+      if (childNode.size == NODESIZE){
+        nodeSplit(pointer, i+1, childNodeIndex);
+        // Decide to insert left or right childNode
+        if (value > currNode.values[i+1]) i++;
       }
-      int childNodeGlobalIndex = currNode.children[childNodeIndex];
-      // Insert new value into child node.
-      int insertResult = nodeInsert(value, childNodeGlobalIndex);
-
-      // if node already exist or does not create new child
-      if (insertResult == -2) return -2;
-      if (insertResult == -1) return -1;
-
-      // Else, a new node has pop up, we need to combine the new node with current node.
-      // If currNode still has space, add new node value to current node.
-      int newValue = nodes[insertResult].values[0];
-      if (currNode.size < NODESIZE){
-        int i = currNode.size-1;
-        // Shift all greater values and pointers to the right.
-        while(i >= 0 && currNode.values[i] > newValue) {
-          currNode.values[i + 1] = currNode.values[i];
-          currNode.children[i + 2] = currNode.children[i+1];
-          i--;
-        }
-        // Add new value and new child node.
-        currNode.values[i+1] = newValue;
-        currNode.children[i+2] = insertResult;
-        currNode.size++;
-        return -1;
-      }else{
-        // If currNode does not have space. Split current node into two nodes.
-        // And return the pointer of second node.
-        int insertNodeIndex = insertResult;
-        int newNodeIndex = initNode();
-        Node newNode = nodes[newNodeIndex];
-        // Sort all values including new node value.
-        int[] copyCurrNodeValues = Arrays.copyOf(currNode.values, NODESIZE);
-        int[] copyCurrNodeChildren = Arrays.copyOf(currNode.children, NODESIZE+1);
-        // Reset current node.
-        currNode.values = new int[NODESIZE];
-        currNode.children = new int[NODESIZE+1];
-        currNode.size = 0;
-
-        int[] allValues = new int[NODESIZE+1];
-        int[] allPointers = new int[NODESIZE+2];
-
-        int sortIndex = NODESIZE-1;
-        // Shift all greater values and pointers to the right.
-        while(sortIndex >= 0 && copyCurrNodeValues[sortIndex] > newValue){
-          allValues[sortIndex+1] = copyCurrNodeValues[sortIndex];
-          allPointers[sortIndex+2] = copyCurrNodeChildren[sortIndex+1];
-          sortIndex--;
-        }
-        // Insert new node value and pointer.
-        allValues[sortIndex+1] = newValue;
-        allPointers[sortIndex+2] = insertNodeIndex;
-        allPointers[sortIndex+1] = copyCurrNodeChildren[sortIndex+1];
-        // Copy all rest values and pointers to allValues and allPointers.
-        while( sortIndex >= 0){
-          allValues[sortIndex] = copyCurrNodeValues[sortIndex];
-          allPointers[sortIndex] = copyCurrNodeChildren[sortIndex];
-          sortIndex--;
-        }
-
-        // Distribute values and pointers to two nodes.
-        int oldNodeStartIndex = 0;
-        int newNodeStartIndex = 0;
-        for(int i = 0; i < allValues.length; i++){
-          if (i <= NODESIZE/2) {
-            currNode.values[oldNodeStartIndex] = allValues[i];
-            currNode.children[oldNodeStartIndex] = allPointers[i];//
-            if(i == NODESIZE/2) currNode.children[oldNodeStartIndex+1] = allPointers[i+1];
-            oldNodeStartIndex++;
-            currNode.size++;
-          }else{
-            newNode.values[newNodeStartIndex] = allValues[i];
-            newNode.children[newNodeStartIndex] = allPointers[i];
-            newNodeStartIndex++;
-            newNode.size++;
-          }
-        }
-        newNode.children[newNode.size] = allPointers[allPointers.length-1];
-        // If current node is not root, we pop the new node up a level to combine it with parent node.
-        if (pointer != root) return newNodeIndex;
-        // If current node is root, we create a new root node and add current node and new node to new root.
-        else {
-          int newRootIndex = initNode();
-          Node newRoot = nodes[newRootIndex];
-          newRoot.values[0] = newNode.values[0];
-          newRoot.children[0] = pointer;
-          newRoot.children[1] = newNodeIndex;
-          newRoot.size++;
-          root = newRootIndex;
-        }
-        return -1;
-      }
+      // Insert value at child node.
+      nodeInsert(value, currNode.children[i+1]);
     }
   }
 
+  /*
+   * nodeSplitt(int parentPointer, int position, int childPointer)
+   *    - Void function, Split childNode at given position of parentNode
+   */
+  private void nodeSplit(int parentPointer, int position, int childPointer){
+    // Create new node or leaf as new node.
+    int newNodeIndex;
+    if (isLeaf(nodes[childPointer])){
+      newNodeIndex = createLeaf();
+    }else{
+      newNodeIndex = initNode();
+    }
+
+    Node newNode = nodes[newNodeIndex];
+    Node childNode = nodes[childPointer];
+    Node parentNode = nodes[parentPointer];
+
+    int halfSize = (NODESIZE+1)/2; // Half size if NODESIZE is even, bigger half of NODESIZE if NODESIZE is odd.
+    // Split values of given childNode
+    for (int i = 0; i < halfSize-1; i++){ // childNode.values(halfSize) to be popped up
+      newNode.values[i] = childNode.values[i+halfSize];
+      newNode.size++;
+    }
+    // Split children of given childNode
+    if (!isLeaf(childNode)){
+      for (int i = 0; i < halfSize; i++){
+        newNode.children[i] = childNode.children[i+halfSize];
+      }
+    }
+    // Update childNode size
+    childNode.size = NODESIZE/2;
+
+    // Shift children and values of parentNode
+    for (int i = parentNode.size-1; i >= position; i--){
+      parentNode.values[i+1] = parentNode.values[i];
+    }
+    for (int i = parentNode.size; i >= position+1; i--){
+      parentNode.children[i+1] = parentNode.children[i];
+    }
+    // Add new node to correct position of parent node
+    parentNode.values[position] = childNode.values[halfSize-1];
+    parentNode.children[position+1] = newNodeIndex;
+    parentNode.size++;
+  }
 
   /*********** Functions for accessing node  ******************/
 

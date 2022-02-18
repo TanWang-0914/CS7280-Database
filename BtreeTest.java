@@ -11,8 +11,8 @@ public final class BtreeTest {
     System.out.println("*** B+tree Testing ***\n");
 
     /** Test simple string array. */
-    test(new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21 });
-    // test(new int[] { 10, 20, 30, 40, 50, 15, 60, 85, 95, 100, 11, 12, 13, 22, 32, 33, 34, 1, 2, 3, 4, 5, 6 });
+    // test(new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21 });
+    test(new int[] { 10, 20, 30, 40, 50, 15, 60, 85, 95, 100, 11, 12, 13, 22, 32, 33, 34, 1, 2, 3, 4, 5, 6 });
 
     System.out.println("*** Finished Testing ***\n");
   }
@@ -31,9 +31,9 @@ public final class BtreeTest {
     int size = tree.CntValues();
     System.out.println("Stored Nodes: " + size + "\n");
 
-    tree.Display(9);
-    tree.Display(0);
+    tree.Display(3);
     tree.Display(1);
+    tree.Display(0);
     tree.Display(2);
 
 
@@ -46,9 +46,9 @@ public final class BtreeTest {
     for(int v : values) tree.Insert(v);
     System.out.println(tree.CntValues() + " stored, " + size + " expected.\n");
 
-    tree.Display(9);
-    tree.Display(0);
+    tree.Display(3);
     tree.Display(1);
+    tree.Display(0);
     tree.Display(2);
 
     System.out.println("Finding Values...");
