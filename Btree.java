@@ -116,7 +116,6 @@ final class Btree {
   /*
    * nodeLookup(int value, int pointer)
    *    - True if the value was found in the specified node.
-   *
    */
   private boolean nodeLookup(int value, int pointer) {
     Node currNode = nodes[pointer];
@@ -171,7 +170,7 @@ final class Btree {
   }
 
   /*
-   * nodeSplitt(int parentPointer, int position, int childPointer)
+   * nodeSplit(int parentPointer, int position, int childPointer)
    *    - Void function, Split childNode at given position of parentNode
    */
   private void nodeSplit(int parentPointer, int position, int childPointer){
