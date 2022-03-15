@@ -334,3 +334,17 @@ public class MoviesItemOps06 {
     }
 }
 ```
+## DynamoDB Features
+### Performance at scale
+- Millions of request per second
+- Microsecond latency
+- Automated global replication
+### No servers to manage
+- Maintenance free
+- Automatic scaling
+- On-demand capacity mode
+### Enterprice ready
+- ACID transactions
+- Encryption at rest
+- On-demand backup and restore
+- NoSQL Workbench
